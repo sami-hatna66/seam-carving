@@ -1,5 +1,6 @@
 #include "SeamCarver.hpp"
 
+// Flatten 2D index into 1D
 int IX(int x, int y, int width, int grouping = 1) { return (x + (y * width)) * grouping; }
 
 SeamCarver::SeamCarver(std::string imagePath, int pTargetWidth, int pTargetHeight,
@@ -12,6 +13,7 @@ SeamCarver::SeamCarver(std::string imagePath, int pTargetWidth, int pTargetHeigh
     targetWidth = pTargetWidth;
     targetHeight = pTargetHeight;
 
+    // Load image BGR values into array
     cv::Vec3b color;
     for (int i = 0; i < currentHeight; i++) {
         for (int j = 0; j < currentWidth; j++) {
@@ -63,6 +65,7 @@ void SeamCarver::updateEnergies(int w, int h) {
             energies.push_back(energy(j, i, w, h));
         }
     }
+    // Set border pixel energies high so that seam finding avoids edges
     for (int i = 0; i < h; i++) {
         energies[IX(0, i, w, 1)] = 2147483647;
         energies[IX(w - 1, i, w, 1)] = 2147483647;
@@ -73,6 +76,7 @@ void SeamCarver::updateEnergies(int w, int h) {
     }
 }
 
+// Use dynamic programming to find seam with lowest energy
 std::pair<int, int> SeamCarver::findSeam(int w, int h) {
     updateEnergies(w, h);
 
@@ -119,11 +123,13 @@ std::pair<int, int> SeamCarver::findSeam(int w, int h) {
         }
     }
 
+    // Return the final pixel in the lowest energy seam
     return std::pair<int, int>(startCol, h);
 }
 
 void SeamCarver::deleteSeam(std::pair<int, int> start, int w, int h) {
     auto colIndex = start.first;
+    // iterate through seam from bottom to top, deleting pixels in seam
     for (int i = start.second - 1; i >= 0; i--) {
         image.erase(image.begin() + IX(colIndex, i, w, 3) + 2);
         image.erase(image.begin() + IX(colIndex, i, w, 3) + 1);
@@ -140,6 +146,7 @@ void SeamCarver::deleteSeam(std::pair<int, int> start, int w, int h) {
 void SeamCarver::addSeam(std::vector<std::pair<int, int>> start, int w, int h) {
     auto colIndex = start[0].first;
     for (int i = h - 1; i >= 0; i--) {
+        // Pixel values for new seam are derived from those of neighbouring pixels
         uchar avgB = (image[IX(colIndex, i, w, 3)] + image[IX(colIndex, i, w, 3) - 3] +
                       image[IX(colIndex, i, w, 3) + 3]) /
                      3;
@@ -164,6 +171,7 @@ void SeamCarver::seamInsertion(int &w, int &h, int targetW, int targetH) {
     std::vector<uchar> cacheImage(image);
     int cacheWidth = w;
 
+    // Remove n seams, record those seams in pathList
     auto range = std::abs(targetW - w);
     for (int i = 0; i < range; i++) {
         auto base = findSeam(w, h);
@@ -178,16 +186,19 @@ void SeamCarver::seamInsertion(int &w, int &h, int targetW, int targetH) {
         pathList.push_back(currentPath);
     }
 
+    // Restore original image
     image = cacheImage;
     w = cacheWidth;
 
     std::reverse(pathList.begin(), pathList.end());
 
+    // insert new seams at each of the previously deleted seams recorded in pathList
     for (int i = 0; i < range; i++) {
         auto currentSeam = pathList.back();
         pathList.pop_back();
         addSeam(currentSeam, w, h);
         w += 1;
+        // Update indexes stored in pathList if their coordinates are affected by the insertion of a new seam
         for (auto &remainingSeam : pathList) {
             for (int j = 0; j < h; j++) {
                 if (remainingSeam[j].first >= currentSeam[j].first) {
@@ -211,6 +222,7 @@ void SeamCarver::adjustWidth() {
 }
 
 void SeamCarver::adjustHeight() {
+    // Rotate image so horizontal seams become vertical seams
     std::vector<uchar> rotatedImg;
     for (int i = 0; i < currentWidth; i++) {
         for (int j = currentHeight - 1; j >= 0; j--) {
@@ -224,6 +236,7 @@ void SeamCarver::adjustHeight() {
     if (targetHeight < currentHeight) {
         auto range = std::abs(currentHeight - targetHeight);
         for (int i = 0; i < range; i++) {
+            // Pass in currentHeight as w and currentWidth as h because rotating image causes these dimensions to swap
             deleteSeam(findSeam(currentHeight, currentWidth), currentHeight, currentWidth);
             currentHeight--;
         }
@@ -231,6 +244,7 @@ void SeamCarver::adjustHeight() {
         seamInsertion(currentHeight, currentWidth, targetHeight, targetWidth);
     }
 
+    // Rotate image back to original orientation after seams have been added/removed
     std::vector<uchar> restoredImg;
     for (int i = currentHeight - 1; i >= 0; i--) {
         for (int j = 0; j < currentWidth; j++) {
