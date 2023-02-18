@@ -1,10 +1,9 @@
 #include "SeamCarver.hpp"
 
-int IX(int x, int y, int width, int grouping = 1) {
-    return (x + (y * width)) * grouping;
-}
+int IX(int x, int y, int width, int grouping = 1) { return (x + (y * width)) * grouping; }
 
-SeamCarver::SeamCarver(std::string imagePath, int pTargetWidth, int pTargetHeight, std::string outPath) {
+SeamCarver::SeamCarver(std::string imagePath, int pTargetWidth, int pTargetHeight,
+                       std::string outPath) {
     cv::Mat readImg = cv::imread(imagePath, 1);
 
     currentWidth = readImg.cols;
@@ -35,10 +34,14 @@ int SeamCarver::energy(int x, int y, int w, int h) {
     int abovePixel = IX(x, y - 1, w, 3);
     int belowPixel = IX(x, y + 1, w, 3);
 
-    if (x == 0) leftPixel = IX(w - 1, y, w, 3);
-    if (x == w - 1) rightPixel = IX(0, y, w, 3);
-    if (y == 0) abovePixel = IX(x, h - 1, w, 3);
-    if (y == h - 1) belowPixel = IX(x, 0, w, 3);
+    if (x == 0)
+        leftPixel = IX(w - 1, y, w, 3);
+    if (x == w - 1)
+        rightPixel = IX(0, y, w, 3);
+    if (y == 0)
+        abovePixel = IX(x, h - 1, w, 3);
+    if (y == h - 1)
+        belowPixel = IX(x, 0, w, 3);
 
     int Bx = std::abs(image[rightPixel] - image[leftPixel]);
     int Gx = std::abs(image[rightPixel + 1] - image[leftPixel + 1]);
@@ -109,19 +112,18 @@ std::pair<int, int> SeamCarver::findSeam(int w, int h) {
         }
     }
 
-    int jStar = 1;
+    int startCol = 1;
     for (int j = 0; j < w; j++) {
-        if (optimums[IX(j, h - 1, w, 1)] < optimums[IX(jStar, h - 1, w, 1)]) {
-            jStar = j;
+        if (optimums[IX(j, h - 1, w, 1)] < optimums[IX(startCol, h - 1, w, 1)]) {
+            startCol = j;
         }
     }
 
-    return std::pair<int, int>(jStar, h);
+    return std::pair<int, int>(startCol, h);
 }
 
 void SeamCarver::deleteSeam(std::pair<int, int> start, int w, int h) {
     auto colIndex = start.first;
-
     for (int i = start.second - 1; i >= 0; i--) {
         image.erase(image.begin() + IX(colIndex, i, w, 3) + 2);
         image.erase(image.begin() + IX(colIndex, i, w, 3) + 1);
@@ -138,9 +140,15 @@ void SeamCarver::deleteSeam(std::pair<int, int> start, int w, int h) {
 void SeamCarver::addSeam(std::vector<std::pair<int, int>> start, int w, int h) {
     auto colIndex = start[0].first;
     for (int i = h - 1; i >= 0; i--) {
-        uchar avgB = (image[IX(colIndex, i, w, 3)] + image[IX(colIndex, i, w, 3) - 3] + image[IX(colIndex, i, w, 3) + 3]) / 3;
-        uchar avgG = (image[IX(colIndex, i, w, 3) + 1] + image[IX(colIndex, i, w, 3) - 2] + image[IX(colIndex, i, w, 3) + 4]) / 3;
-        uchar avgR = (image[IX(colIndex, i, w, 3) + 2] + image[IX(colIndex, i, w, 3) - 1] + image[IX(colIndex, i, w, 3) + 5]) / 3;
+        uchar avgB = (image[IX(colIndex, i, w, 3)] + image[IX(colIndex, i, w, 3) - 3] +
+                      image[IX(colIndex, i, w, 3) + 3]) /
+                     3;
+        uchar avgG = (image[IX(colIndex, i, w, 3) + 1] + image[IX(colIndex, i, w, 3) - 2] +
+                      image[IX(colIndex, i, w, 3) + 4]) /
+                     3;
+        uchar avgR = (image[IX(colIndex, i, w, 3) + 2] + image[IX(colIndex, i, w, 3) - 1] +
+                      image[IX(colIndex, i, w, 3) + 5]) /
+                     3;
         image.insert(image.begin() + IX(colIndex, i, w, 3) + 3, avgB);
         image.insert(image.begin() + IX(colIndex, i, w, 3) + 4, avgG);
         image.insert(image.begin() + IX(colIndex, i, w, 3) + 5, avgR);
@@ -150,7 +158,7 @@ void SeamCarver::addSeam(std::vector<std::pair<int, int>> start, int w, int h) {
     }
 }
 
-void SeamCarver::seamInsertion(int& w, int& h, int targetW, int targetH) {
+void SeamCarver::seamInsertion(int &w, int &h, int targetW, int targetH) {
     std::vector<std::vector<std::pair<int, int>>> pathList;
 
     std::vector<uchar> cacheImage(image);
@@ -180,7 +188,7 @@ void SeamCarver::seamInsertion(int& w, int& h, int targetW, int targetH) {
         pathList.pop_back();
         addSeam(currentSeam, w, h);
         w += 1;
-        for (auto& remainingSeam : pathList) {
+        for (auto &remainingSeam : pathList) {
             for (int j = 0; j < h; j++) {
                 if (remainingSeam[j].first >= currentSeam[j].first) {
                     remainingSeam[j].first += 1;
@@ -195,7 +203,7 @@ void SeamCarver::adjustWidth() {
         auto range = std::abs(currentWidth - targetWidth);
         for (int i = 0; i < range; i++) {
             deleteSeam(findSeam(currentWidth, currentHeight), currentWidth, currentHeight);
-            currentWidth -= 1;
+            currentWidth--;
         }
     } else if (targetWidth > currentWidth) {
         seamInsertion(currentWidth, currentHeight, targetWidth, targetHeight);
@@ -203,21 +211,21 @@ void SeamCarver::adjustWidth() {
 }
 
 void SeamCarver::adjustHeight() {
-    std::vector<uchar> transposedImg;
+    std::vector<uchar> rotatedImg;
     for (int i = 0; i < currentWidth; i++) {
         for (int j = currentHeight - 1; j >= 0; j--) {
-            transposedImg.push_back(image[IX(i, j, currentWidth, 3)]);
-            transposedImg.push_back(image[IX(i, j, currentWidth, 3) + 1]);
-            transposedImg.push_back(image[IX(i, j, currentWidth, 3) + 2]);
+            rotatedImg.push_back(image[IX(i, j, currentWidth, 3)]);
+            rotatedImg.push_back(image[IX(i, j, currentWidth, 3) + 1]);
+            rotatedImg.push_back(image[IX(i, j, currentWidth, 3) + 2]);
         }
     }
-    image = transposedImg;
+    image = rotatedImg;
 
     if (targetHeight < currentHeight) {
         auto range = std::abs(currentHeight - targetHeight);
         for (int i = 0; i < range; i++) {
             deleteSeam(findSeam(currentHeight, currentWidth), currentHeight, currentWidth);
-            currentHeight -= 1;
+            currentHeight--;
         }
     } else if (targetHeight > currentHeight) {
         seamInsertion(currentHeight, currentWidth, targetHeight, targetWidth);
@@ -238,4 +246,3 @@ void SeamCarver::saveResult(std::string path) {
     cv::Mat exportImg = cv::Mat(currentHeight, currentWidth, CV_8UC3, image.data());
     cv::imwrite(path, exportImg);
 }
-

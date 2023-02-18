@@ -1,7 +1,7 @@
 #include <opencv2/opencv.hpp>
 
 class SeamCarver {
-private:
+  private:
     std::vector<uchar> image;
     std::vector<int> energies;
     std::vector<int> optimums;
@@ -10,15 +10,18 @@ private:
     int currentHeight;
     int targetWidth;
     int targetHeight;
-public:
+
+  public:
     SeamCarver(std::string imagePath, int pTargetWidth, int pTargetHeight, std::string outPath);
 
     int energy(int x, int y, int w, int h);
     void updateEnergies(int w, int h);
 
     std::pair<int, int> findSeam(int w, int h);
+
     void deleteSeam(std::pair<int, int> start, int w, int h);
-    void seamInsertion(int& w, int& h, int targetW, int targetH);
+
+    void seamInsertion(int &w, int &h, int targetW, int targetH);
     void addSeam(std::vector<std::pair<int, int>> start, int w, int h);
 
     void adjustWidth();
